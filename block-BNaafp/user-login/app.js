@@ -3,10 +3,13 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var dotenv = require("dotenv");
 
 var v1Router = require('./routes/index');
 var usersRouter = require('./routes/users');
 const mongoose = require('mongoose');
+
+dotenv.config();
 
 // connecting to db 
 mongoose.connect("mongodb://localhost/Users1", (err) => {

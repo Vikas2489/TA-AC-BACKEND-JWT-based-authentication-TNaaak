@@ -6,7 +6,8 @@ var router = express.Router();
 router.post('/register', async function(req, res, next) {
     try {
         let user = await User.create(req.body);
-        return res.status(200).json({ user });
+        let token = await user.signToken();
+        return res.status(200).json({ user: user.userJSON(token) });
     } catch (error) {
         return next(error);
     }
@@ -22,9 +23,11 @@ router.post("/login", async function(req, res, next) {
         let user = await User.findOne({ email });
         if (user) {
             let result = await user.verifyPassword(password);
-            console.log(result);
             if (result) {
-                return res.status(200).json({ msg: "logged in successfully" });
+                // generating token
+                let token = await user.signToken();
+                console.log(token);
+                return res.status(200).json({ user: user.userJSON(token) });
             } else {
                 return res.status(400).json({ msg: "Password is incorrect" });
             }
