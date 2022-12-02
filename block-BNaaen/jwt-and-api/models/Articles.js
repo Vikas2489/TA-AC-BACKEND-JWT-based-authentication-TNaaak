@@ -24,8 +24,7 @@ articleSchema.pre('save', async function(next) {
     }
 });
 
-articleSchema.methods.getArticleFormat = async function(currentLoggedInUserId) {
-
+articleSchema.methods.getArticleFormat = function(currentLoggedInUser = null) {
     return {
         slug: this.slug,
         title: this.title,
@@ -35,11 +34,8 @@ articleSchema.methods.getArticleFormat = async function(currentLoggedInUserId) {
         createdAt: this.createdAt,
         updatedAt: this.updatedAt,
         favoritesCount: this.favouritedBy.length,
-        author: {
-            username: this.author.username,
-            bio: this.author.bio,
-            isFollowing: await this.author.followers.includes(currentLoggedInUserId) ? true : false,
-        }
+        favorited: Boolean(currentLoggedInUser) && this.favouritedBy.includes(currentLoggedInUser.id),
+        author: this.author.getUserFormat(currentLoggedInUser)
     }
 }
 
