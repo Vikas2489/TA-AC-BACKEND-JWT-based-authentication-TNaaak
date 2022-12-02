@@ -6,7 +6,7 @@ var auth = require('../middleware/auth');
 /* GET current logged in  user. */
 router.get('/', auth.verifyToken, function(req, res, next) {
     if (req.user) {
-        return res.status(200).json({ user: req.user });
+        return res.status(200).json({ user: req.user.getUserFormat(req.user) });
     } else {
         return res.status(200).json({ error: "You are not logged in yet" });
     }
@@ -48,8 +48,8 @@ router.use(auth.verifyToken);
 // update user
 router.put("/", async function(req, res, next) {
     try {
-        let updatedUser = await User.findByIdAndUpdate(req.user.userId, req.body, { $new: true });
-        return res.status(200).json({ updatedUser });
+        let updatedUser = await User.findByIdAndUpdate(req.user.id, req.body, { $new: true });
+        return res.status(200).json({ user: updatedUser.getUserFormat(req.user) });
     } catch (error) {
         return next(error);
     }
