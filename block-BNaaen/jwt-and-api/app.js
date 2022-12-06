@@ -14,9 +14,18 @@ var articlesRouter = require('./routes/articles');
 dotenv.config();
 
 // connecting to db
+<<<<<<< HEAD
+mongoose.connect(
+  'mongodb+srv://vikasdb:vikasdb@cluster0.e7ng15c.mongodb.net/?retryWrites=true&w=majority',
+  (err) => {
+    return console.log(err ? err : true);
+  }
+);
+=======
 mongoose.connect('mongodb://localhost/users', (err) => {
   return console.log(err ? err : true);
 });
+>>>>>>> 1c6e645b7446c6cde02d6c769368355698d0cea7
 
 var app = express();
 
