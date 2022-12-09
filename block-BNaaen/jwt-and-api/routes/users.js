@@ -15,9 +15,22 @@ router.get('/', auth.verifyToken, function (req, res, next) {
 // post to register
 router.post('/', async function (req, res, next) {
   try {
-    let user = await User.create(req.body);
-    let token = await user.signToken();
-    return res.status(200).json({ user: user.userJSON(token) });
+    let { email, password, username } = req.body;
+    if (email && password && username) {
+      let userAlreadyExistsOrNot = await User.findOne({ email: email });
+      if (userAlreadyExistsOrNot) {
+        return res.status(400).send({
+          errors: {
+            email: 'email already exists',
+            username: 'username already exists',
+          },
+        });
+      } else {
+        let user = await User.create(req.body);
+        let token = await user.signToken();
+        return res.status(200).json({ user: user.userJSON(token) });
+      }
+    }
   } catch (error) {
     next(error);
   }
