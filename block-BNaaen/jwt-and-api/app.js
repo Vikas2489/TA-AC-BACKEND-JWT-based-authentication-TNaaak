@@ -27,11 +27,12 @@ mongoose.connect(
 
 var app = express();
 
-app.use(cors());
-
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
+
+// allowing cors
+app.use(cors());
 
 app.use(logger('dev'));
 app.use(express.json());
