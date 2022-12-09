@@ -8,7 +8,7 @@ var userSchema = new Schema(
   {
     username: { type: String, required: true, unique: true },
     email: { type: String, unique: true, required: true },
-    password: { type: String, minlength: 5 },
+    password: { type: String, minlength: 5, required: true },
     bio: { type: String },
     followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     followings: [{ type: Schema.Types.ObjectId, ref: 'User' }],
