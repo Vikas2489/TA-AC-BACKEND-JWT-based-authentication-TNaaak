@@ -1,4 +1,5 @@
 var createError = require('http-errors');
+var cors = require('cors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
@@ -11,23 +12,25 @@ var usersRouter = require('./routes/users');
 var profilesRouter = require('./routes/profiles');
 var articlesRouter = require('./routes/articles');
 
-dotenv.config();
+dotenv.config({
+  path: './config.env',
+});
 
 // connecting to db
-<<<<<<< HEAD
 mongoose.connect(
   'mongodb+srv://vikasdb:vikasdb@cluster0.e7ng15c.mongodb.net/?retryWrites=true&w=majority',
   (err) => {
     return console.log(err ? err : true);
   }
 );
-=======
-mongoose.connect('mongodb://localhost/users', (err) => {
-  return console.log(err ? err : true);
-});
->>>>>>> 1c6e645b7446c6cde02d6c769368355698d0cea7
 
 var app = express();
+
+app.use(
+  cors({
+    origin: 'http://localhost:3000',
+  })
+);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
