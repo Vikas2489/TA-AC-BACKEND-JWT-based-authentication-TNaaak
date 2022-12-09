@@ -37,7 +37,6 @@ userSchema.methods.signToken = async function () {
   };
   try {
     let token = await jwt.sign(payload, process.env.SECRET);
-    console.log(token, 'token');
     return token;
   } catch (error) {
     return error;

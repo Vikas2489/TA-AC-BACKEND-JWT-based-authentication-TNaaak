@@ -1,4 +1,5 @@
 var createError = require('http-errors');
+var cors = require('cors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
@@ -11,7 +12,9 @@ var usersRouter = require('./routes/users');
 var profilesRouter = require('./routes/profiles');
 var articlesRouter = require('./routes/articles');
 
-dotenv.config();
+dotenv.config({
+  path: './config.env',
+});
 
 // connecting to db
 mongoose.connect(
@@ -22,6 +25,12 @@ mongoose.connect(
 );
 
 var app = express();
+
+app.use(
+  cors({
+    origin: 'http://localhost:3000',
+  })
+);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
