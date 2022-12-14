@@ -6,7 +6,7 @@ var auth = require('../middleware/auth');
 /* GET current logged in  user. */
 router.get('/', auth.verifyToken, function (req, res, next) {
   if (req.user) {
-    return res.status(200).json({ user: req.user.getUserFormat(req.user) });
+    return res.status(200).json({ user: req.user.userJSON(req.token) });
   } else {
     return res.status(200).json({ error: 'You are not logged in yet' });
   }
@@ -42,7 +42,7 @@ router.post('/login', async function (req, res, next) {
   if (!email || !password) {
     return res
       .status(422)
-      .json({ error: 'Email/passwrod is required to login' });
+      .json({ errors: { email: 'Email/password is required to login' } });
   }
   let user = await User.findOne({ email });
   if (user) {
@@ -51,10 +51,14 @@ router.post('/login', async function (req, res, next) {
       let token = await user.signToken();
       return res.status(200).json({ user: user.userJSON(token) });
     } else {
-      return res.status(401).json({ error: 'Password is incorrect' });
+      return res
+        .status(401)
+        .json({ errors: { password: 'Password is incorrect' } });
     }
   } else {
-    return res.status(200).json({ error: 'Email is not registered' });
+    return res
+      .status(200)
+      .json({ errors: { email: 'Email is not registered' } });
   }
 });
 

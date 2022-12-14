@@ -8,25 +8,22 @@ var Comment = require('../models/Comments');
 const { isValidObjectId } = require('mongoose');
 
 // get comments from an article
-router.get(
-  '/:slug/comments',
-  auth.authenticationOptional,
-  async (req, res, next) => {
-    let slug = req.params.slug;
-    let userId = req.user.id;
-    try {
-      let article = await (
-        await (await Article.findOne({ slug })).populate('comments')
-      ).populate('comments.author');
-      let commentsArr = await article.comments.map((comment) =>
-        comment.getCommentFormat(userId)
-      );
-      return res.status(200).json({ commentsArr });
-    } catch (error) {
-      return next(error);
-    }
+router.get('/:slug/comments', auth.verifyToken, async (req, res, next) => {
+  let slug = req.params.slug;
+  let userId = req.user.id;
+  try {
+    let article = await (
+      await (await Article.findOne({ slug })).populate('comments')
+    ).populate('comments.author');
+    let commentsArr = await article.comments.map((comment) => {
+      return comment.getCommentFormat(userId);
+    });
+
+    return res.status(200).json({ commentsArr });
+  } catch (error) {
+    return next(error);
   }
-);
+});
 
 // list articles
 router.get('/', auth.authenticationOptional, async (req, res, next) => {
@@ -58,16 +55,38 @@ router.get('/', auth.authenticationOptional, async (req, res, next) => {
     }
   }
   try {
-    let articlesArr = await Article.find(query)
+    let articles = await Article.find(query)
       .sort({ createdAt: 1 })
       .populate('author')
       .limit(limit)
       .skip(offset)
       .exec();
-    articlesArr = articlesArr.map((article) => {
+    articles = articles.map((article) => {
       return article.getArticleFormat(req.user);
     });
-    return res.status(200).json({ articlesArr });
+    return res.status(200).json({ articles, articlesCount: articles.length });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// feed
+router.get('/feed', auth.verifyToken, async (req, res, next) => {
+  let limit = req.query.limit ? req.query.limit : 20;
+  let offset = req.query.offset ? req.query.offset : 0;
+  try {
+    let articles = await Article.find({
+      author: { $in: req.user.followings },
+    })
+      .sort({ createdAt: 1 })
+      .limit(limit)
+      .skip(offset)
+      .populate('author')
+      .exec();
+    articles = articles.map(function (article) {
+      return article.getArticleFormat(req.user.userId);
+    });
+    return res.status(200).json({ articles, articlesCount: articles.length });
   } catch (error) {
     return next(error);
   }
@@ -79,10 +98,9 @@ router.get('/:slug', auth.authenticationOptional, async (req, res, next) => {
   try {
     let article = await Article.findOne({ slug }).populate('author');
     if (article) {
-      console.log(article, 'single article');
       return res
         .status(200)
-        .json({ singleArticle: article.getArticleFormat(req.user) });
+        .json({ article: article.getArticleFormat(req.user) });
     } else {
       return res.json({ error: `Didn't found any aritcle with name ${slug}` });
     }
@@ -93,43 +111,62 @@ router.get('/:slug', auth.authenticationOptional, async (req, res, next) => {
 
 router.use(auth.verifyToken);
 
-// feed
-router.get('/feed', auth.verifyToken, async (req, res, next) => {
-  let limit = req.query.limit ? req.query.limit : 20;
-  let offset = req.query.offset ? req.query.offset : 0;
-  try {
-    let articlesArr = await Article.find({
-      author: { $in: req.user.followings },
-    })
-      .sort({ createdAt: 1 })
-      .limit(limit)
-      .skip(offset)
-      .populate('author')
-      .exec();
-    articlesArr = articlesArr.map(function (article) {
-      return article.getArticleFormat(req.user.userId);
-    });
-    return res
-      .status(200)
-      .json({ articlesArr, articlesCount: articlesArr.length });
-  } catch (error) {
-    return next(error);
-  }
-});
-
 // create a article
 router.post('/', async (req, res, next) => {
   try {
+    let { title, description, body } = req.body;
     req.body.author = req.user.id;
-    let article = await (await Article.create(req.body)).populate('author');
-    let updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
-      { $push: { articles: article.id } },
-      { new: true }
-    );
-    return res
-      .status(200)
-      .json({ article: article.getArticleFormat(req.user) });
+    if (title && description && body) {
+      let article = await (await Article.create(req.body)).populate('author');
+      let updatedUser = await User.findByIdAndUpdate(
+        req.user.id,
+        { $push: { articles: article.id } },
+        { new: true }
+      );
+      return res
+        .status(200)
+        .json({ article: article.getArticleFormat(req.user) });
+    } else if (title && !description && !body) {
+      return res.status(400).send({
+        errors: {
+          description: 'description is required',
+          body: 'body is required',
+        },
+      });
+    } else if (title && description && !body) {
+      return res.status(400).send({
+        errors: {
+          body: 'body is required',
+        },
+      });
+    } else if (!title && description && body) {
+      return res.status(400).send({
+        errors: {
+          title: 'title is required',
+        },
+      });
+    } else if (title && !description && body) {
+      return res.status(400).send({
+        errors: {
+          description: 'description is required',
+        },
+      });
+    } else if (!title && !description && body) {
+      return res.status(400).send({
+        errors: {
+          description: 'description is required',
+          title: 'title is required',
+        },
+      });
+    } else {
+      return res.status(400).send({
+        errors: {
+          title: 'title is required',
+          description: 'description is required',
+          body: 'body is required',
+        },
+      });
+    }
   } catch (error) {
     next(error);
   }
@@ -139,6 +176,7 @@ router.post('/', async (req, res, next) => {
 router.put('/:slug', async (req, res, next) => {
   let slug = req.params.slug;
   let article = await Article.findOne({ slug });
+  console.log(req.body);
   try {
     if (article) {
       if (req.user.id == article.author) {
@@ -146,7 +184,9 @@ router.put('/:slug', async (req, res, next) => {
           req.body.slug = slugger(req.body.title);
         }
         let updatedArticle = await (
-          await Article.findByIdAndUpdate(article._id, req.body, { new: true })
+          await Article.findByIdAndUpdate(article._id, req.body, {
+            new: true,
+          })
         ).populate('author');
         return res
           .status(200)
@@ -213,7 +253,9 @@ router.post('/:slug/comments', async (req, res, next) => {
     let updatedArticle = await Article.findByIdAndUpdate(article._id, {
       $push: { comments: comment._id },
     });
-    return res.status(200).json({ comment: comment.getCommentFormat(userId) });
+    return res
+      .status(200)
+      .json({ comment: comment.getCommentFormat(req.user.id) });
   } catch (error) {
     return next(error);
   }
@@ -259,14 +301,17 @@ router.post('/:slug/favourite', async (req, res, next) => {
   let article = await Article.findOne({ slug });
   try {
     if (article) {
-      if ((await article).favouritedBy.includes(userId)) {
-        return res.json({ msg: 'Already added in the favourites by you.' });
-      } else {
-        let updatedArticle = await Article.findByIdAndUpdate(article.id, {
+      let updatedArticle = await Article.findByIdAndUpdate(
+        article.id,
+        {
           $push: { favouritedBy: userId },
-        });
-        return res.status(200).json({ success_msg: 'favourited by you.' });
-      }
+          $inc: { favouriteCounts: 1 },
+        },
+        { new: true }
+      ).populate('author');
+      return res
+        .status(200)
+        .json({ article: updatedArticle.getArticleFormat(req.user) });
     } else {
       return res
         .status(200)
@@ -284,17 +329,20 @@ router.delete('/:slug/favourite', async (req, res, next) => {
   let article = await Article.findOne({ slug });
   try {
     if (article) {
-      if (await article.favouritedBy.includes(userId)) {
-        let updatedArticle = await Article.findByIdAndUpdate(article.id, {
+      let updatedArticle = await Article.findByIdAndUpdate(
+        article.id,
+        {
           $pull: { favouritedBy: userId },
-        });
-        return res.status(200).json({ success_msg: 'unfavourited by you.' });
-      } else {
-        return res.json({ msg: 'not favourited by you.' });
-      }
+          $inc: { favouriteCounts: -1 },
+        },
+        { new: true }
+      ).populate('author');
+      return res
+        .status(200)
+        .json({ article: updatedArticle.getArticleFormat(req.user) });
     } else {
       return res
-        .status(400)
+        .status(200)
         .json({ error: `did found any article named as ${slug}` });
     }
   } catch (error) {
