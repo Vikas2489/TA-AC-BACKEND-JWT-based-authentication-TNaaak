@@ -14,6 +14,7 @@ var articleSchema = new Schema(
     slug: { type: String },
     comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
     favouritedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    favouriteCounts: 0,
   },
   { timestamps: true }
 );
@@ -36,8 +37,8 @@ articleSchema.methods.getArticleFormat = function (currentLoggedInUser = null) {
     taglist: this.taglist,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
-    favoritesCount: this.favouritedBy.length,
-    favorited:
+    favouritesCounts: this.favouritedBy.length,
+    favourited:
       Boolean(currentLoggedInUser) &&
       this.favouritedBy.includes(currentLoggedInUser.id),
     author: this.author.getUserFormat(currentLoggedInUser),
