@@ -70,6 +70,7 @@ router.put('/', async function (req, res, next) {
     let updatedUser = await User.findByIdAndUpdate(req.user.id, req.body, {
       $new: true,
     });
+    console.log('updateduser once', updatedUser);
     return res.status(200).json({ user: updatedUser.getUserFormat(req.user) });
   } catch (error) {
     return next(error);
